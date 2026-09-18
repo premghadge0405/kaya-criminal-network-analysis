@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criminal Network Analysis</title>
+    <!-- Importing Vis.js for the network graph -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #0f172a; 
+            color: #f8fafc;
+            margin: 0; 
+            padding: 20px; 
+        }
+        h1 { color: #38bdf8; }
+        /* Styling the graph container */
+        #network-container { 
+            width: 100%; 
+            height: 600px; 
+            border: 1px solid #334155; 
+            background-color: #1e293b; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); 
+        }
+    </style>
+</head>
+<body>
+    <h1>AI Network Intelligence Dashboard</h1>
+    <p>Live relationship mapping and anomaly detection.</p>
+    
+    <!-- The graph will be drawn inside this div -->
+    <div id="network-container"></div>
+
+    <script>
+        // Placeholder data: Tomorrow, we will inject real data from Python here!
+        var nodes = new vis.DataSet([
+            { id: 1, label: "Suspect: Rajesh", color: "#ef4444", font: {color: 'white'} },
+            { id: 2, label: "Location: Andheri West", color: "#3b82f6", font: {color: 'white'} },
+            { id: 3, label: "Vehicle: MH12 AB 1234", color: "#eab308", font: {color: 'white'} }
+        ]);
+
+        var edges = new vis.DataSet([
+            { from: 1, to: 2, label: "Spotted at", color: {color: "#94a3b8"} },
+            { from: 1, to: 3, label: "Registered Owner", color: {color: "#94a3b8"} }
+        ]);
+
+        var container = document.getElementById("network-container");
+        var data = { nodes: nodes, edges: edges };
+        var options = {
+            nodes: { shape: 'dot', size: 20 },
+            physics: { stabilization: true }
+        };
+        
+        // Initialize the network graph
+        var network = new vis.Network(container, data, options);
+    </script>
+</body>
+</html>
