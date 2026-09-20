@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYBERCELL | ORBITAL COMMAND</title>
+    <!-- ADVANCED 3D GLOBE LIBRARY -->
+    <script src="https://unpkg.com/globe.gl"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        
+        * { box-sizing: border-box; font-family: 'Share Tech Mono', monospace; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #02050b; }
+        ::-webkit-scrollbar-thumb { background: #00ff66; }
+
+        body { 
+            background-color: #03050a; color: #00ff66; margin: 0; padding: 10px;
+            height: 100vh; overflow: hidden; display: flex; flex-direction: column; gap: 10px;
+            background-image: linear-gradient(rgba(0, 255, 102, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 102, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 20px; background: rgba(0, 255, 102, 0.05);
+            border: 1px solid #00ff66; box-shadow: 0 0 15px rgba(0,255,102,0.2);
+        }
+        .logo { font-size: 24px; font-weight: bold; color: #fff; text-shadow: 0 0 10px #00ff66; }
+        .logo span { color: #00ff66; }
+        .nav-status { font-size: 14px; color: #00ffaa; }
+
+        .dashboard-grid { display: grid; grid-template-columns: 300px 1fr 340px; gap: 15px; height: calc(100vh - 80px); }
+
+        .panel {
+            background: rgba(2, 5, 11, 0.85); border: 1px solid #005522;
+            display: flex; flex-direction: column; position: relative;
+            box-shadow: inset 0 0 20px rgba(0,255,102,0.05); z-index: 10;
+        }
+        .panel::before { content: ''; position: absolute; top: -1px; left: -1px; width: 10px; height: 10px; border-top: 2px solid #00ff66; border-left: 2px solid #00ff66; z-index: 20; }
+        .panel::after { content: ''; position: absolute; bottom: -1px; right: -1px; width: 10px; height: 10px; border-bottom: 2px solid #00ff66; border-right: 2px solid #00ff66; z-index: 20; }
+
+        .panel-header {
+            background: rgba(0, 255, 102, 0.1); padding: 8px 15px;
+            font-size: 14px; text-transform: uppercase; border-bottom: 1px solid #005522;
+            color: #fff; text-shadow: 0 0 5px #00ff66; letter-spacing: 1px; z-index: 10; position: relative;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .panel-content { padding: 15px; flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; z-index: 10; position: relative; }
+
+        /* RADAR */
+        .radar-box { width: 100%; aspect-ratio: 1; border-radius: 50%; border: 1px solid #00ff66; position: relative; overflow: hidden; background: repeating-radial-gradient(transparent, transparent 20px, rgba(0,255,102,0.1) 21px); box-shadow: 0 0 20px rgba(0,255,102,0.2); }
+        .radar-sweep { position: absolute; top: 50%; left: 50%; width: 50%; height: 50%; background: linear-gradient(45deg, rgba(0,255,102,0.8) 0%, transparent 50%); transform-origin: top left; animation: sweep 3s linear infinite; }
+        .radar-dot { position: absolute; width: 4px; height: 4px; background: #ff0055; border-radius: 50%; box-shadow: 0 0 8px #ff0055; animation: blink 1s infinite; }
+        @keyframes sweep { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        /* INPUTS & BUTTONS */
+        input { width: 100%; padding: 10px; background: #030811; border: 1px solid #00ff66; color: #00ff66; outline: none; }
+        button { width: 100%; padding: 10px; background: #00ff66; color: #000; border: none; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-top: 10px; transition: 0.2s; }
+        button:hover { background: #fff; box-shadow: 0 0 15px #00ff66; }
+        .reset-btn { width: auto; padding: 4px 10px; margin: 0; font-size: 10px; background: transparent; border: 1px solid #00ff66; color: #00ff66; cursor: pointer; }
+        .reset-btn:hover { background: #ff0055; border-color: #ff0055; color: #fff; }
+
+        /* CENTER GLOBE STAGE */
+        #center-stage { position: absolute; top: 38px; bottom: 0; left: 0; right: 0; overflow: hidden; background: radial-gradient(circle, #0a1122 0%, #000000 100%); }
+        #globe-container { width: 100%; height: 100%; cursor: grab; }
+        #globe-container:active { cursor: grabbing; }
+        
+        .globe-hud { position: absolute; top: 15px; left: 15px; font-size: 11px; color: #00aa66; z-index: 5; pointer-events: none; line-height: 1.6; }
+        .globe-status { position: absolute; bottom: 15px; right: 15px; font-size: 11px; color: #00ffbb; z-index: 5; pointer-events: none; text-align: right; }
+
+        /* DOSSIER */
+        .profile-pic { width: 80px; height: 80px; border: 2px dashed #00ff66; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 30px; color: #005522; background: rgba(0,255,102,0.05); }
+        .dossier-section { background: rgba(0, 20, 10, 0.4); border: 1px solid #005522; padding: 10px; border-radius: 4px; margin-top: 10px; }
+        .dossier-header { font-size: 11px; color: #00aa66; border-bottom: 1px dashed #005522; padding-bottom: 5px; margin-bottom: 8px; letter-spacing: 1px; }
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px; line-height: 1.4; }
+        .stat-label { color: #00aa66; min-width: 80px; }
+        .stat-value { color: #fff; text-align: right; word-wrap: break-word; max-width: 180px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">CYBER<span>CELL</span> // KAYA OS</div>
+        <div class="nav-status" id="hud-nav-status">SURVEILLANCE MODE: GLOBAL ROTATION ACTIVE</div>
+    </header>
+
+    <div class="dashboard-grid">
+        
+        <!-- LEFT PANEL -->
+        <div class="panel">
+            <div class="panel-header">Operations / Tracking</div>
+            <div class="panel-content">
+                <div>
+                    <label style="font-size: 12px;">TARGET TRACER:</label>
+                    <input type="text" id="searchInput" placeholder="Enter Full Name (e.g. Rajesh)..." autocomplete="off">
+                    <button onclick="engageTrace()">Acquire Target Coordinates</button>
+                </div>
+                
+                <div style="margin-top: 10px;">
+                    <label style="font-size: 12px; margin-bottom: 10px; display: block;">LIVE SECTOR RADAR:</label>
+                    <div class="radar-box">
+                        <div class="radar-sweep"></div>
+                        <div class="radar-dot" style="top: 30%; left: 40%;"></div>
+                        <div class="radar-dot" style="top: 70%; left: 60%; background: #00ff66; box-shadow: 0 0 8px #00ff66;"></div>
+                    </div>
+                </div>
+
+                <div style="font-size: 11px; color: #00aa66; line-height: 1.5; border: 1px dashed #005522; padding: 10px; margin-top: auto;">
+                    [SYSTEM]: Select an active node on the globe to extract classified intelligence.
+                </div>
+            </div>
+        </div>
+
+        <!-- CENTER PANEL: 3D INTERACTIVE GLOBE -->
+        <div class="panel" style="border-color: #00aaff; box-shadow: 0 0 20px rgba(0,170,255,0.1); overflow: hidden;">
+            <div class="panel-header" style="background: rgba(0, 170, 255, 0.1); border-color: #00aaff; color: #00aaff;">
+                <span id="center-title">Global Topography & Intercept Map</span>
+                <button class="reset-btn" id="resetBtn" onclick="resetGlobe()" style="display: none;">WIPE MAP</button>
+            </div>
+            
+            <div id="center-stage">
+                <!-- GLOBE RENDERS HERE -->
+                <div id="globe-container"></div>
+                
+                <div class="globe-hud" id="globeHud">
+                    SAT-ARRAY: GSAT-7A [GEO-SYNC]<br>
+                    FREQUENCY: 14.24 GHz (KU-BAND)<br>
+                    MAP ENGAGED
+                </div>
+                <div class="globe-status" id="globeStatus">
+                    STATUS: ORBITAL SWEEP<br>
+                    WAITING FOR SEARCH INPUT...
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL: DETAILED DOSSIER -->
+        <div class="panel">
+            <div class="panel-header">Target Profiler</div>
+            <div class="panel-content">
+                <div class="profile-pic" id="prof-icon">?</div>
+                <h3 id="prof-name" style="text-align: center; margin: 10px 0 0 0; color: #fff;">NO TARGET</h3>
+                <div id="prof-threat" style="text-align: center; font-size: 12px; margin-bottom: 10px; color: #00aa66;">AWAITING QUERY</div>
+                
+                <div class="dossier-section">
+                    <div class="dossier-header">CLASSIFIED DOSSIER</div>
+                    <div class="stat-row"><span class="stat-label">ID:</span> <span class="stat-value" id="prof-id">---</span></div>
+                    <div class="stat-row"><span class="stat-label">CONTACT:</span> <span class="stat-value" id="prof-contact">---</span></div>
+                    <div class="stat-row"><span class="stat-label">EDUCATION:</span> <span class="stat-value" id="prof-edu">---</span></div>
+                    <div class="stat-row"><span class="stat-label">ADDRESS:</span> <span class="stat-value" id="prof-address">---</span></div>
+                </div>
+
+                <div class="dossier-section">
+                    <div class="dossier-header">FINANCIAL & TRACKING</div>
+                    <div class="stat-row"><span class="stat-label">PRIMARY A/C:</span> <span class="stat-value" id="prof-bank">---</span></div>
+                    <div class="stat-row"><span class="stat-label">LAST PING:</span> <span class="stat-value" id="prof-loc">---</span></div>
+                    <div class="stat-row"><span class="stat-label">STATUS:</span> <span class="stat-value" id="prof-status">---</span></div>
+                </div>
+
+                <div style="margin-top: auto;">
+                    <label style="font-size: 11px; margin-bottom: 5px; display: block; color: #00aa66;">COMM INTERCEPTS:</label>
+                    <div id="intercept-log" style="background: #020408; padding: 10px; border: 1px solid #003311; font-size: 10px; height: 80px; display: flex; flex-direction: column; justify-content: flex-end;">
+                        <span style="color: #555;">Map Idle. Enter target name to project connections.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 1. DATA (ADDED "TYPE" PROPERTY TO HIDE BANKS) ---
+        const suspects = [
+            { id: "rajesh", type: "person", label: "Rajesh Kumar", lat: 28.6315, lng: 77.2167, color: "#ef4444", contact: "+91-9898-000-8899", education: "B.Tech Drop-out", address: "42 Connaught Place, New Delhi", bank: "HDFC-9982 (Flagged)" },
+            { id: "amit", type: "person", label: "Amit Patel", lat: 19.1136, lng: 72.8697, color: "#3b82f6", contact: "+91-9122-444-5555", education: "B.Com, Mumbai Univ", address: "Andheri East Safehouse, Mumbai", bank: "SBI-4431" },
+            { id: "vikram", type: "person", label: "Vikram Singh", lat: 28.4595, lng: 77.0266, color: "#3b82f6", contact: "+91-9711-200-3411", education: "Diploma Mech Eng", address: "Sector 14, Gurugram", bank: "Cash Operations" },
+            
+            // "type: entity" means it will still receive a data arc line, but the name/dot won't show on the map!
+            { id: "bank_delhi", type: "entity", label: "HDFC Vault", lat: 28.6415, lng: 77.2300, color: "#eab308", contact: "N/A", education: "N/A", address: "Connaught Central Branch", bank: "Active Conduit" }, 
+            { id: "shell", type: "entity", label: "Apex Global Traders", lat: 19.3133, lng: -81.2546, color: "#ef4444", contact: "corp@apexglobal.com", education: "Corporate Entity", address: "Offshore Shell, Cayman Islands", bank: "Offshore Holding" }
+        ];
+
+        const connections = [
+            { source: "rajesh", target: "amit", label: "Encrypted Call" },
+            { source: "amit", target: "vikram", label: "Meeting" },
+            { source: "rajesh", target: "bank_delhi", label: "Transfer" },
+            { source: "bank_delhi", target: "shell", label: "Laundered" },
+            { source: "vikram", target: "shell", label: "Hawala" }
+        ];
+
+        const arcData = connections.map(link => {
+            const src = suspects.find(s => s.id === link.source);
+            const tgt = suspects.find(s => s.id === link.target);
+            return {
+                startLat: src.lat, startLng: src.lng,
+                endLat: tgt.lat, endLng: tgt.lng,
+                color: [src.color, tgt.color],
+                label: link.label
+            };
+        });
+
+
+        // --- 2. INITIALIZE 3D GLOBE WITH CLICK EVENTS ---
+        const globeContainer = document.getElementById('globe-container');
+        const world = Globe()(globeContainer)
+            .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-dark.jpg')
+            .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
+            .backgroundColor('rgba(0,0,0,0)')
+            
+            .labelLat(d => d.lat)
+            .labelLng(d => d.lng)
+            .labelText(d => d.label)
+            .labelSize(1.5)
+            .labelDotRadius(0.8)
+            .labelColor(d => d.color)
+            .labelResolution(2)
+            
+            .arcStartLat(d => d.startLat)
+            .arcEndLat(d => d.endLat)
+            .arcStartLng(d => d.startLng)
+            .arcEndLng(d => d.endLng)
+            .arcColor(d => d.color)
+            .arcDashLength(0.4)
+            .arcDashGap(0.2)
+            .arcDashAnimateTime(1500)
+            
+            // INTERACTIVITY: Hover and Click Events!
+            .onLabelHover(label => globeContainer.style.cursor = label ? 'pointer' : 'grab')
+            .onLabelClick(label => {
+                // When you click a partner on the globe, zoom to them and pull their dossier!
+                world.pointOfView({ lat: label.lat, lng: label.lng, altitude: 0.6 }, 1000);
+                updateProfiler(label);
+                
+                document.getElementById('hud-nav-status').innerText = "LOCK RE-ACQUIRED: " + label.label.toUpperCase();
+                document.getElementById('globeStatus').innerHTML = `<span style="color:#00ff66;">TARGET SHIFTED: ${label.lat}, ${label.lng}<br>PULLING DOSSIER...</span>`;
+            })
+
+            .pointOfView({ lat: 20, lng: 77, altitude: 2.2 });
+
+        world.controls().autoRotate = true;
+        world.controls().autoRotateSpeed = 1.2;
+
+        setTimeout(() => world.width(globeContainer.clientWidth).height(globeContainer.clientHeight), 100);
+        window.addEventListener('resize', () => { world.width(globeContainer.clientWidth).height(globeContainer.clientHeight); });
+
+
+        // --- 3. TARGET TRACER SEARCH LOGIC ---
+        function engageTrace() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+            if (searchTerm === "") return;
+
+            // Find the person they searched for
+            const target = suspects.find(s => s.type === "person" && (s.label.toLowerCase().includes(searchTerm) || s.id.toLowerCase().includes(searchTerm)));
+
+            if (!target) {
+                alert("Target not found. Try: Rajesh Kumar");
+                return;
+            }
+
+            document.getElementById('hud-nav-status').innerText = "LOCK ACQUIRED: RENDERING GEOGRAPHIC RELATIONS...";
+            document.getElementById('hud-nav-status').style.color = "#ff0055";
+            document.getElementById('globeStatus').innerHTML = `<span style="color:#ff0055;">COORDINATES LOCKED: ${target.lat}, ${target.lng}<br>UPLOADING LINK NETWORK...</span>`;
+            document.getElementById('resetBtn').style.display = "block";
+
+            updateProfiler(target);
+
+            world.controls().autoRotate = false;
+            
+            // MAGIC TRICK: We filter the labels so ONLY "persons" show up. 
+            // The bank account name is completely removed, but the glowing arcs will still strike the bank's coordinates!
+            const onlyPeople = suspects.filter(s => s.type === "person");
+            world.labelsData(onlyPeople);
+            world.arcsData(arcData);
+            
+            // Zoom in
+            world.pointOfView({ lat: target.lat, lng: target.lng, altitude: 0.7 }, 2000);
+        }
+
+        // --- 4. RIGHT PANEL DOSSIER ---
+        function updateProfiler(node) {
+            document.getElementById('prof-name').innerText = node.label.toUpperCase();
+            document.getElementById('prof-id').innerText = node.id.toUpperCase();
+            document.getElementById('prof-contact').innerText = node.contact;
+            document.getElementById('prof-edu').innerText = node.education;
+            document.getElementById('prof-address').innerText = node.address;
+            document.getElementById('prof-bank').innerText = node.bank;
+            document.getElementById('prof-loc').innerText = `LAT: ${node.lat} | LNG: ${node.lng}`;
+
+            let threat = "UNKNOWN"; let icon = "?"; let status = "MONITORED";
+            if (node.color === "#ef4444") { threat = "CRITICAL THREAT (RED)"; icon = "☠"; status = "WARRANT ISSUED"; }
+            if (node.color === "#3b82f6") { threat = "KEY CO-CONSPIRATOR"; icon = "👤"; }
+            
+            document.getElementById('prof-threat').innerText = threat;
+            document.getElementById('prof-threat').style.color = node.color;
+            document.getElementById('prof-icon').innerText = icon;
+            document.getElementById('prof-icon').style.color = node.color;
+            document.getElementById('prof-icon').style.borderColor = node.color;
+            document.getElementById('prof-status').innerText = status;
+
+            document.getElementById('intercept-log').innerHTML = `
+                <div style="color:#ff0055;">> SATELLITE BEAM LOCKED ON ${node.label.toUpperCase()}</div>
+                <div style="color:#00aaff;">> Unfolding CDR cell tower relations...</div>
+                <div style="color:#00ff66;">> Geographic mesh rendered.</div>
+            `;
+        }
+
+        function resetGlobe() {
+            world.labelsData([]);
+            world.arcsData([]);
+            world.controls().autoRotate = true;
+            world.pointOfView({ lat: 20, lng: 77, altitude: 2.2 }, 1500);
+            
+            document.getElementById('resetBtn').style.display = "none";
+            document.getElementById('hud-nav-status').innerText = "SURVEILLANCE MODE: GLOBAL ROTATION ACTIVE";
+            document.getElementById('hud-nav-status').style.color = "#00ffaa";
+            document.getElementById('globeStatus').innerHTML = "STATUS: ORBITAL SWEEP<br>WAITING FOR SEARCH INPUT...";
+            
+            document.getElementById('searchInput').value = '';
+            document.getElementById('prof-name').innerText = "NO TARGET";
+            // Clears text visually
+            document.getElementById('prof-id').innerText = "---";
+            document.getElementById('prof-contact').innerText = "---";
+            document.getElementById('prof-edu').innerText = "---";
+            document.getElementById('prof-address').innerText = "---";
+            document.getElementById('prof-bank').innerText = "---";
+            document.getElementById('prof-loc').innerText = "---";
+            document.getElementById('intercept-log').innerHTML = '<span style="color: #555;">Map Idle. Enter target name to project connections.</span>';
+        }
+
+        document.getElementById("searchInput").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") { event.preventDefault(); engageTrace(); }
+        });
+    </script>
+</body>
+</html>
